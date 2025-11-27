@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>习惯小英雄</title>
+    <meta name="theme-color" content="#FFFBEB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="习惯小英雄">
+    <link rel="icon" type="image/svg+xml" href="/icons/app-icon.svg">
+    <link rel="icon" type="image/png" href="/icons/app-icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              paper: '#FFFBEB',
+              primary: '#8B5CF6', 
+              secondary: '#F472B6',
+              accent: '#FCD34D', 
+              success: '#4ADE80',
+              sky: '#60A5FA',
+            },
+            boxShadow: {
+              'cartoon': '4px 4px 0px 0px #000000',
+              'cartoon-sm': '2px 2px 0px 0px #000000',
+              'cartoon-lg': '8px 8px 0px 0px #000000',
+              'cartoon-inner': 'inset 4px 4px 0px 0px rgba(0,0,0,0.1)',
+            },
+            borderRadius: {
+              'hand': '2rem',
+              'blob': '30% 70% 70% 30% / 30% 30% 70% 70%',
+            },
+            animation: {
+              'bounce-slow': 'bounce 3s infinite',
+              'wiggle': 'wiggle 1s ease-in-out infinite',
+              'float': 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              wiggle: {
+                '0%, 100%': { transform: 'rotate(-3deg)' },
+                '50%': { transform: 'rotate(3deg)' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background-color: #FFFBEB;
+        /* Dot pattern */
+        background-image: radial-gradient(#E2E8F0 20%, transparent 20%), radial-gradient(#E2E8F0 20%, transparent 20%);
+        background-position: 0 0, 15px 15px;
+        background-size: 30px 30px;
+        font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif;
+        overscroll-behavior: none;
+      }
+      
+      /* Hide scrollbar for cleaner look */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #CBD5E1; 
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94A3B8; 
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="text-slate-900 antialiased selection:bg-accent selection:text-black">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

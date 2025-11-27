@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Rounded square background, paper tone -->
+  <rect x="32" y="32" width="960" height="960" rx="220" fill="#FFFBEB" stroke="#000" stroke-width="24"/>
+
+  <!-- Hero badge circle -->
+  <circle cx="512" cy="460" r="250" fill="#FCD34D" stroke="#000" stroke-width="20"/>
+
+  <!-- Cape swoosh -->
+  <path d="M610 350 C740 280, 860 360, 860 460 C860 560, 760 600, 650 580 C680 520, 620 470, 610 350 Z"
+        fill="#8B5CF6" stroke="#000" stroke-width="18" />
+
+  <!-- Mask band -->
+  <path d="M360 420 C400 380, 620 380, 660 420 C630 460, 390 460, 360 420 Z" fill="#F472B6" stroke="#000" stroke-width="14"/>
+  <ellipse cx="470" cy="420" rx="42" ry="20" fill="#fff" stroke="#000" stroke-width="10"/>
+  <ellipse cx="550" cy="420" rx="42" ry="20" fill="#fff" stroke="#000" stroke-width="10"/>
+
+  <!-- Smile -->
+  <path d="M460 480 C500 520, 540 520, 580 480" fill="none" stroke="#000" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Clipboard with check -->
+  <rect x="250" y="560" width="170" height="200" rx="20" fill="#60A5FA" stroke="#000" stroke-width="16"/>
+  <rect x="270" y="600" width="130" height="120" rx="10" fill="#fff" stroke="#000" stroke-width="10"/>
+  <path d="M290 660 L330 700 L390 630" fill="none" stroke="#4ADE80" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="300" y="570" width="90" height="30" rx="8" fill="#fff" stroke="#000" stroke-width="10"/>
+
+  <!-- Chest emblem H -->
+  <rect x="455" y="520" width="110" height="120" rx="18" fill="#fff" stroke="#000" stroke-width="12"/>
+  <path d="M480 540 L480 700 M540 540 L540 700 M480 620 L540 620" fill="none" stroke="#000" stroke-width="20" stroke-linecap="round"/>
+
+  <!-- Ground vegetables hint (simple shapes) -->
+  <ellipse cx="770" cy="720" rx="80" ry="60" fill="#4ADE80" stroke="#000" stroke-width="12"/>
+  <path d="M720 720 C720 680, 740 660, 760 660 C780 660, 800 680, 800 720" fill="#22C55E" stroke="#000" stroke-width="10"/>
+  <path d="M640 740 C640 700, 660 700, 700 690 C700 740, 660 760, 640 740 Z" fill="#F97316" stroke="#000" stroke-width="10"/>
+
+  <!-- App name badge (subtle) -->
+  <rect x="260" y="820" width="504" height="120" rx="26" fill="#fff" stroke="#000" stroke-width="14"/>
+  <text x="512" y="896" font-family="'Comic Sans MS', 'Comic Neue', sans-serif" font-size="64" text-anchor="middle" fill="#DC2626">习惯小英雄</text>
+
+  <!-- Cartoon drop shadow mimic -->
+  <path d="M140 160 L170 130 L880 130 L910 160 L910 870 L880 900 L170 900 L140 870 Z" fill="none" stroke="#000" stroke-width="8" opacity="0.15"/>
+</svg>

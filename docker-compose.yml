@@ -1,0 +1,24 @@
+services:
+  habit-hero:
+    build: .
+    image: habit-hero:latest
+    platform: linux/amd64
+    container_name: habit-hero
+    ports:
+      - "4000:4000"
+    volumes:
+      # 持久化数据库
+      - habit-data:/app/data
+      # 自定义图标（可随时替换 apple-touch-icon.png）
+      - ./icons:/app/dist/icons
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      # 如果需要使用 Gemini API，取消注释并设置你的 API Key
+      # - GEMINI_API_KEY=your_api_key_here
+    restart: unless-stopped
+
+volumes:
+  habit-data:
+    driver: local
+
