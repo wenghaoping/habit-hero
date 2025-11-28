@@ -4,20 +4,17 @@ FROM --platform=linux/amd64 node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN npm install -g pnpm
-
-# 复制 package 文件和 pnpm 配置
-COPY package.json pnpm-lock.yaml .npmrc ./
+# 复制 package 文件和 npm 配置
+COPY package.json package-lock.json ./
 
 # 安装依赖
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 # 复制前端源码
 COPY . .
 
 # 构建前端（生成 dist 目录）
-RUN pnpm run build
+RUN npm run build
 
 # 阶段 2: 最终运行镜像
 FROM --platform=linux/amd64 node:20-alpine
@@ -27,14 +24,11 @@ WORKDIR /app
 # 安装 python3 和 build 工具（sqlite3 需要）
 RUN apk add --no-cache python3 make g++
 
-# 安装 pnpm
-RUN npm install -g pnpm
-
-# 复制 package 文件和 pnpm 配置
-COPY package.json pnpm-lock.yaml .npmrc ./
+# 复制 package 文件和 npm 配置
+COPY package.json package-lock.json ./
 
 # 只安装生产依赖
-RUN pnpm install --prod --frozen-lockfile
+RUN npm ci --only=production
 
 # 复制后端代码
 COPY server ./server
