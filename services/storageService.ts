@@ -1,4 +1,4 @@
-import { AppData, DEFAULT_HABITS, DEFAULT_REWARDS, Transaction, PendingTask, Habit, Reward } from '../types';
+import { AppData, DEFAULT_HABITS, DEFAULT_REWARDS, Transaction, PendingTask, Habit, Reward, Deduction } from '../types';
 
 // 动态地址：优先使用 VITE_API_BASE；未设置则走相对路径（由 Vite 代理到后端）
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || '';
@@ -11,6 +11,7 @@ const getDefaultSettings = () => ({
   habits: DEFAULT_HABITS,
   rewards: DEFAULT_REWARDS,
   pendingTasks: [],
+  deductions: [],
 });
 
 // Load everything from server
@@ -41,6 +42,7 @@ export const saveSettings = async (data: {
   habits: Habit[],
   rewards: Reward[],
   pendingTasks: PendingTask[],
+  deductions: Deduction[],
 }): Promise<void> => {
   try {
     const res = await fetch(`${API_BASE}/api/settings`, {
@@ -132,6 +134,18 @@ export const importDataFromFile = (file: File): Promise<AppData> => {
     reader.onerror = () => reject(reader.error);
     reader.readAsText(file);
   });
+};
+
+// Clear points and transactions
+export const clearPointsHistory = async (): Promise<void> => {
+  const res = await fetch(`${API_BASE}/api/clear-points-history`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'Failed to clear points and history');
+  }
 };
 
 // Reset all data on server (requires admin password)

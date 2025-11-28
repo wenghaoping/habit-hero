@@ -17,18 +17,43 @@ const defaultData = {
   totalPoints: 0,
   avatar: null,
   habits: [
-    { id: '1', name: '打扫房间', points: 10, emoji: '🧹' },
-    { id: '2', name: '完成作业', points: 15, emoji: '📚' },
-    { id: '3', name: '认真刷牙', points: 5, emoji: '🦷' },
-    { id: '4', name: '吃蔬菜', points: 5, emoji: '🥦' },
+    { id: '1', name: '自己穿衣服', points: 10, emoji: '👕' },
+    { id: '2', name: '自己吃饭', points: 10, emoji: '🍽️' },
+    { id: '3', name: '收拾玩具', points: 10, emoji: '🧸' },
+    { id: '4', name: '认真洗手', points: 5, emoji: '🧼' },
+    { id: '5', name: '说谢谢', points: 5, emoji: '🙏' },
+    { id: '6', name: '分享玩具', points: 10, emoji: '🤝' },
+    { id: '7', name: '自己上厕所', points: 10, emoji: '🚽' },
+    { id: '8', name: '按时睡觉', points: 15, emoji: '😴' },
+    { id: '9', name: '听老师话', points: 10, emoji: '👂' },
+    { id: '10', name: '帮助别人', points: 15, emoji: '💝' },
   ],
   rewards: [
-    { id: '1', name: '看电视30分钟', cost: 50, emoji: '📺' },
-    { id: '2', name: '吃冰淇淋', cost: 100, emoji: '🍦' },
-    { id: '3', name: '买新玩具', cost: 500, emoji: '🧸' },
+    { id: '1', name: '看动画片15分钟', cost: 30, emoji: '📺' },
+    { id: '2', name: '吃小零食', cost: 20, emoji: '🍪' },
+    { id: '3', name: '去公园玩', cost: 50, emoji: '🌳' },
+    { id: '4', name: '买小贴纸', cost: 40, emoji: '⭐' },
+    { id: '5', name: '听故事', cost: 25, emoji: '📖' },
+    { id: '6', name: '玩喜欢的玩具', cost: 30, emoji: '🚗' },
+    { id: '7', name: '和爸爸妈妈做手工', cost: 40, emoji: '✂️' },
+    { id: '8', name: '选择晚餐', cost: 35, emoji: '🍕' },
+    { id: '9', name: '晚睡15分钟', cost: 50, emoji: '🌙' },
+    { id: '10', name: '去游乐场', cost: 100, emoji: '🎠' },
   ],
   pendingTasks: [],
   transactions: [],
+  deductions: [
+    { id: '1', name: '不听话', points: 10, emoji: '😠' },
+    { id: '2', name: '乱扔东西', points: 5, emoji: '🗑️' },
+    { id: '3', name: '打人/推人', points: 15, emoji: '👊' },
+    { id: '4', name: '不分享', points: 10, emoji: '🙅' },
+    { id: '5', name: '哭闹发脾气', points: 10, emoji: '😭' },
+    { id: '6', name: '不收拾玩具', points: 5, emoji: '🧹' },
+    { id: '7', name: '说脏话', points: 15, emoji: '🤬' },
+    { id: '8', name: '抢别人东西', points: 15, emoji: '✋' },
+    { id: '9', name: '不按时睡觉', points: 10, emoji: '🌙' },
+    { id: '10', name: '不礼貌', points: 5, emoji: '😤' },
+  ],
 };
 
 let db;
@@ -70,6 +95,12 @@ function initDb() {
       description TEXT,
       date TEXT
     );
+    CREATE TABLE IF NOT EXISTS deductions (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      points INTEGER,
+      emoji TEXT
+    );
   `);
   // Try to add image column for rewards if missing
   try {
@@ -108,6 +139,7 @@ function normalizeData(raw) {
     rewards: raw.rewards ?? [],
     pendingTasks: raw.pendingTasks ?? [],
     transactions: raw.transactions ?? [],
+    deductions: raw.deductions ?? [],
   };
 }
 
@@ -117,7 +149,8 @@ function readAll() {
   const rewards = db.prepare('SELECT id, name, cost, emoji, image FROM rewards').all();
   const pendingTasks = db.prepare('SELECT id, habitId, habitName, points, emoji, timestamp FROM pending_tasks').all();
   const transactions = db.prepare('SELECT id, type, amount, description, date FROM transactions ORDER BY date DESC').all();
-  return normalizeData({ settings, habits, rewards, pendingTasks, transactions });
+  const deductions = db.prepare('SELECT id, name, points, emoji FROM deductions').all();
+  return normalizeData({ settings, habits, rewards, pendingTasks, transactions, deductions });
 }
 
 // Get full app data
@@ -155,6 +188,13 @@ app.post('/api/settings', (req, res) => {
         const stmt = db.prepare('INSERT INTO pending_tasks (id, habitId, habitName, points, emoji, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
         for (const t of incoming.pendingTasks) {
           stmt.run(t.id, t.habitId, t.habitName, t.points, t.emoji, t.timestamp);
+        }
+      }
+      if (Array.isArray(incoming.deductions)) {
+        db.prepare('DELETE FROM deductions').run();
+        const stmt = db.prepare('INSERT INTO deductions (id, name, points, emoji) VALUES (?, ?, ?, ?)');
+        for (const d of incoming.deductions) {
+          stmt.run(d.id, d.name, d.points, d.emoji);
         }
       }
     });
@@ -207,6 +247,7 @@ app.post('/api/import', (req, res) => {
       db.prepare('DELETE FROM rewards').run();
       db.prepare('DELETE FROM pending_tasks').run();
       db.prepare('DELETE FROM transactions').run();
+      db.prepare('DELETE FROM deductions').run();
       const hStmt = db.prepare('INSERT INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
       for (const h of data.habits || []) hStmt.run(h.id, h.name, h.points, h.emoji);
       const rStmt = db.prepare('INSERT INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
@@ -215,6 +256,8 @@ app.post('/api/import', (req, res) => {
       for (const t of data.pendingTasks || []) pStmt.run(t.id, t.habitId, t.habitName, t.points, t.emoji, t.timestamp);
       const tStmt = db.prepare('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)');
       for (const tx of data.transactions || []) tStmt.run(tx.id, tx.type, tx.amount, tx.description, tx.date);
+      const dStmt = db.prepare('INSERT INTO deductions (id, name, points, emoji) VALUES (?, ?, ?, ?)');
+      for (const d of data.deductions || []) dStmt.run(d.id, d.name, d.points, d.emoji);
     });
     transaction();
     res.json({ ok: true });
@@ -233,6 +276,21 @@ app.get('/api/export', (req, res) => {
   }
 });
 
+// Clear points and transactions
+app.post('/api/clear-points-history', (req, res) => {
+  try {
+    const transaction = db.transaction(() => {
+      // 只清空积分和历史记录，保留其他数据
+      db.prepare('UPDATE settings SET totalPoints = 0 WHERE id = 1').run();
+      db.prepare('DELETE FROM transactions').run();
+    });
+    transaction();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to clear points and history' });
+  }
+});
+
 // Reset all data (Developer tool)
 app.post('/api/reset', (req, res) => {
   try {
@@ -246,6 +304,7 @@ app.post('/api/reset', (req, res) => {
       db.prepare('DELETE FROM rewards').run();
       db.prepare('DELETE FROM pending_tasks').run();
       db.prepare('DELETE FROM transactions').run();
+      db.prepare('DELETE FROM deductions').run();
     });
     transaction();
     res.json({ ok: true });
