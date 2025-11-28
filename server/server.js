@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import Database from 'better-sqlite3';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -33,10 +32,10 @@ const defaultData = {
 };
 
 let db;
-async function initDb() {
-  db = await open({ filename: DB_PATH, driver: sqlite3.Database });
-  await db.exec(`
-    PRAGMA foreign_keys = ON;
+function initDb() {
+  db = new Database(DB_PATH);
+  db.pragma('foreign_keys = ON');
+  db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY,
       childName TEXT,
@@ -74,30 +73,28 @@ async function initDb() {
   `);
   // Try to add image column for rewards if missing
   try {
-    await db.exec('ALTER TABLE rewards ADD COLUMN image TEXT');
+    db.exec('ALTER TABLE rewards ADD COLUMN image TEXT');
   } catch (e) {
     // ignore if column exists
   }
   // Try to add avatar column for settings if missing
   try {
-    await db.exec('ALTER TABLE settings ADD COLUMN avatar TEXT');
+    db.exec('ALTER TABLE settings ADD COLUMN avatar TEXT');
   } catch (e) {
     // ignore if column exists
   }
-  const row = await db.get('SELECT COUNT(1) as c FROM settings WHERE id = 1');
+  const row = db.prepare('SELECT COUNT(1) as c FROM settings WHERE id = 1').get();
   if (!row || row.c === 0) {
-    await db.run('INSERT INTO settings (id, childName, parentPin, totalPoints, avatar) VALUES (1, ?, ?, ?, ?)', defaultData.childName, defaultData.parentPin, defaultData.totalPoints, defaultData.avatar);
+    db.prepare('INSERT INTO settings (id, childName, parentPin, totalPoints, avatar) VALUES (1, ?, ?, ?, ?)').run(defaultData.childName, defaultData.parentPin, defaultData.totalPoints, defaultData.avatar);
     // seed defaults for habits/rewards
-    const insertHabit = await db.prepare('INSERT OR IGNORE INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
+    const insertHabit = db.prepare('INSERT OR IGNORE INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
     for (const h of defaultData.habits) {
-      await insertHabit.run(h.id, h.name, h.points, h.emoji);
+      insertHabit.run(h.id, h.name, h.points, h.emoji);
     }
-    await insertHabit.finalize();
-    const insertReward = await db.prepare('INSERT OR IGNORE INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
+    const insertReward = db.prepare('INSERT OR IGNORE INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
     for (const r of defaultData.rewards) {
-      await insertReward.run(r.id, r.name, r.cost, r.emoji, null);
+      insertReward.run(r.id, r.name, r.cost, r.emoji, null);
     }
-    await insertReward.finalize();
   }
 }
 
@@ -114,19 +111,19 @@ function normalizeData(raw) {
   };
 }
 
-async function readAll() {
-  const settings = await db.get('SELECT childName, parentPin, totalPoints, avatar FROM settings WHERE id = 1');
-  const habits = await db.all('SELECT id, name, points, emoji FROM habits');
-  const rewards = await db.all('SELECT id, name, cost, emoji, image FROM rewards');
-  const pendingTasks = await db.all('SELECT id, habitId, habitName, points, emoji, timestamp FROM pending_tasks');
-  const transactions = await db.all('SELECT id, type, amount, description, date FROM transactions ORDER BY date DESC');
+function readAll() {
+  const settings = db.prepare('SELECT childName, parentPin, totalPoints, avatar FROM settings WHERE id = 1').get();
+  const habits = db.prepare('SELECT id, name, points, emoji FROM habits').all();
+  const rewards = db.prepare('SELECT id, name, cost, emoji, image FROM rewards').all();
+  const pendingTasks = db.prepare('SELECT id, habitId, habitName, points, emoji, timestamp FROM pending_tasks').all();
+  const transactions = db.prepare('SELECT id, type, amount, description, date FROM transactions ORDER BY date DESC').all();
   return normalizeData({ settings, habits, rewards, pendingTasks, transactions });
 }
 
 // Get full app data
-app.get('/api/data', async (req, res) => {
+app.get('/api/data', (req, res) => {
   try {
-    const data = await readAll();
+    const data = readAll();
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'Failed to read data' });
@@ -134,53 +131,46 @@ app.get('/api/data', async (req, res) => {
 });
 
 // Save settings (partial app config) and lists
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', (req, res) => {
   const incoming = req.body;
-  let started = false;
   try {
-    await db.exec('BEGIN');
-    started = true;
-    await db.run('UPDATE settings SET childName = ?, parentPin = ?, totalPoints = ?, avatar = ? WHERE id = 1', incoming.childName ?? defaultData.childName, incoming.parentPin ?? defaultData.parentPin, typeof incoming.totalPoints === 'number' ? incoming.totalPoints : 0, incoming.avatar ?? null);
-    if (Array.isArray(incoming.habits)) {
-      await db.run('DELETE FROM habits');
-      const stmt = await db.prepare('INSERT INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
-      for (const h of incoming.habits) {
-        await stmt.run(h.id, h.name, h.points, h.emoji);
+    const transaction = db.transaction(() => {
+      db.prepare('UPDATE settings SET childName = ?, parentPin = ?, totalPoints = ?, avatar = ? WHERE id = 1').run(incoming.childName ?? defaultData.childName, incoming.parentPin ?? defaultData.parentPin, typeof incoming.totalPoints === 'number' ? incoming.totalPoints : 0, incoming.avatar ?? null);
+      if (Array.isArray(incoming.habits)) {
+        db.prepare('DELETE FROM habits').run();
+        const stmt = db.prepare('INSERT INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
+        for (const h of incoming.habits) {
+          stmt.run(h.id, h.name, h.points, h.emoji);
+        }
       }
-      await stmt.finalize();
-    }
-    if (Array.isArray(incoming.rewards)) {
-      await db.run('DELETE FROM rewards');
-      const stmt = await db.prepare('INSERT INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
-      for (const r of incoming.rewards) {
-        await stmt.run(r.id, r.name, r.cost, r.emoji ?? null, r.image ?? null);
+      if (Array.isArray(incoming.rewards)) {
+        db.prepare('DELETE FROM rewards').run();
+        const stmt = db.prepare('INSERT INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
+        for (const r of incoming.rewards) {
+          stmt.run(r.id, r.name, r.cost, r.emoji ?? null, r.image ?? null);
+        }
       }
-      await stmt.finalize();
-    }
-    if (Array.isArray(incoming.pendingTasks)) {
-      await db.run('DELETE FROM pending_tasks');
-      const stmt = await db.prepare('INSERT INTO pending_tasks (id, habitId, habitName, points, emoji, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
-      for (const t of incoming.pendingTasks) {
-        await stmt.run(t.id, t.habitId, t.habitName, t.points, t.emoji, t.timestamp);
+      if (Array.isArray(incoming.pendingTasks)) {
+        db.prepare('DELETE FROM pending_tasks').run();
+        const stmt = db.prepare('INSERT INTO pending_tasks (id, habitId, habitName, points, emoji, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
+        for (const t of incoming.pendingTasks) {
+          stmt.run(t.id, t.habitId, t.habitName, t.points, t.emoji, t.timestamp);
+        }
       }
-      await stmt.finalize();
-    }
-    await db.exec('COMMIT');
+    });
+    transaction();
     res.json({ ok: true });
   } catch (e) {
-    if (started) {
-      try { await db.exec('ROLLBACK'); } catch { }
-    }
     console.error('Failed to save settings:', e);
     res.status(500).json({ error: 'Failed to save settings' });
   }
 });
 
 // Add single transaction
-app.post('/api/transaction', async (req, res) => {
+app.post('/api/transaction', (req, res) => {
   try {
     const tx = req.body;
-    await db.run('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)', tx.id, tx.type, tx.amount, tx.description, tx.date);
+    db.prepare('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)').run(tx.id, tx.type, tx.amount, tx.description, tx.date);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: 'Failed to save transaction' });
@@ -188,60 +178,55 @@ app.post('/api/transaction', async (req, res) => {
 });
 
 // Bulk add transactions
-app.post('/api/bulk-transactions', async (req, res) => {
+app.post('/api/bulk-transactions', (req, res) => {
   try {
     const list = Array.isArray(req.body) ? req.body : [];
-    await db.exec('BEGIN');
-    const stmt = await db.prepare('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)');
-    for (const t of list) {
-      await stmt.run(t.id, t.type, t.amount, t.description, t.date);
-    }
-    await stmt.finalize();
-    await db.exec('COMMIT');
+    const transaction = db.transaction(() => {
+      const stmt = db.prepare('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)');
+      for (const t of list) {
+        stmt.run(t.id, t.type, t.amount, t.description, t.date);
+      }
+    });
+    transaction();
     res.json({ ok: true });
   } catch (e) {
-    await db.exec('ROLLBACK');
     res.status(500).json({ error: 'Failed to bulk save transactions' });
   }
 });
 
 // Import full data (replace)
-app.post('/api/import', async (req, res) => {
+app.post('/api/import', (req, res) => {
   try {
     const data = req.body;
     if (!data || typeof data.totalPoints !== 'number') {
       return res.status(400).json({ error: 'Invalid data format' });
     }
-    await db.exec('BEGIN');
-    await db.run('UPDATE settings SET childName = ?, parentPin = ?, totalPoints = ?, avatar = ? WHERE id = 1', data.childName ?? defaultData.childName, data.parentPin ?? defaultData.parentPin, data.totalPoints, data.avatar ?? null);
-    await db.run('DELETE FROM habits');
-    await db.run('DELETE FROM rewards');
-    await db.run('DELETE FROM pending_tasks');
-    await db.run('DELETE FROM transactions');
-    const hStmt = await db.prepare('INSERT INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
-    for (const h of data.habits || []) await hStmt.run(h.id, h.name, h.points, h.emoji);
-    await hStmt.finalize();
-    const rStmt = await db.prepare('INSERT INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
-    for (const r of data.rewards || []) await rStmt.run(r.id, r.name, r.cost, r.emoji ?? null, r.image ?? null);
-    await rStmt.finalize();
-    const pStmt = await db.prepare('INSERT INTO pending_tasks (id, habitId, habitName, points, emoji, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
-    for (const t of data.pendingTasks || []) await pStmt.run(t.id, t.habitId, t.habitName, t.points, t.emoji, t.timestamp);
-    await pStmt.finalize();
-    const tStmt = await db.prepare('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)');
-    for (const tx of data.transactions || []) await tStmt.run(tx.id, tx.type, tx.amount, tx.description, tx.date);
-    await tStmt.finalize();
-    await db.exec('COMMIT');
+    const transaction = db.transaction(() => {
+      db.prepare('UPDATE settings SET childName = ?, parentPin = ?, totalPoints = ?, avatar = ? WHERE id = 1').run(data.childName ?? defaultData.childName, data.parentPin ?? defaultData.parentPin, data.totalPoints, data.avatar ?? null);
+      db.prepare('DELETE FROM habits').run();
+      db.prepare('DELETE FROM rewards').run();
+      db.prepare('DELETE FROM pending_tasks').run();
+      db.prepare('DELETE FROM transactions').run();
+      const hStmt = db.prepare('INSERT INTO habits (id, name, points, emoji) VALUES (?, ?, ?, ?)');
+      for (const h of data.habits || []) hStmt.run(h.id, h.name, h.points, h.emoji);
+      const rStmt = db.prepare('INSERT INTO rewards (id, name, cost, emoji, image) VALUES (?, ?, ?, ?, ?)');
+      for (const r of data.rewards || []) rStmt.run(r.id, r.name, r.cost, r.emoji ?? null, r.image ?? null);
+      const pStmt = db.prepare('INSERT INTO pending_tasks (id, habitId, habitName, points, emoji, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
+      for (const t of data.pendingTasks || []) pStmt.run(t.id, t.habitId, t.habitName, t.points, t.emoji, t.timestamp);
+      const tStmt = db.prepare('INSERT INTO transactions (id, type, amount, description, date) VALUES (?, ?, ?, ?, ?)');
+      for (const tx of data.transactions || []) tStmt.run(tx.id, tx.type, tx.amount, tx.description, tx.date);
+    });
+    transaction();
     res.json({ ok: true });
   } catch (e) {
-    await db.exec('ROLLBACK');
     res.status(500).json({ error: 'Failed to import data' });
   }
 });
 
 // Export full data
-app.get('/api/export', async (req, res) => {
+app.get('/api/export', (req, res) => {
   try {
-    const data = await readAll();
+    const data = readAll();
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'Failed to export data' });
@@ -249,31 +234,32 @@ app.get('/api/export', async (req, res) => {
 });
 
 // Reset all data (Developer tool)
-app.post('/api/reset', async (req, res) => {
+app.post('/api/reset', (req, res) => {
   try {
     const { password } = req.body || {};
     if (password !== 'admin') {
       return res.status(403).json({ error: 'Invalid password' });
     }
-    await db.exec('BEGIN');
-    await db.run('UPDATE settings SET childName = ?, parentPin = ?, totalPoints = ?, avatar = ? WHERE id = 1', defaultData.childName, defaultData.parentPin, 0, null);
-    await db.run('DELETE FROM habits');
-    await db.run('DELETE FROM rewards');
-    await db.run('DELETE FROM pending_tasks');
-    await db.run('DELETE FROM transactions');
-    await db.exec('COMMIT');
+    const transaction = db.transaction(() => {
+      db.prepare('UPDATE settings SET childName = ?, parentPin = ?, totalPoints = ?, avatar = ? WHERE id = 1').run(defaultData.childName, defaultData.parentPin, 0, null);
+      db.prepare('DELETE FROM habits').run();
+      db.prepare('DELETE FROM rewards').run();
+      db.prepare('DELETE FROM pending_tasks').run();
+      db.prepare('DELETE FROM transactions').run();
+    });
+    transaction();
     res.json({ ok: true });
   } catch (e) {
-    await db.exec('ROLLBACK');
     res.status(500).json({ error: 'Failed to reset data' });
   }
 });
 
-initDb().then(() => {
+try {
+  initDb();
   app.listen(PORT, () => {
     console.log(`HabitHero server (SQLite) running at http://localhost:${PORT}`);
   });
-}).catch(err => {
+} catch (err) {
   console.error('Failed to init DB', err);
   process.exit(1);
-});
+}

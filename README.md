@@ -35,5 +35,5 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Pd29pCNsU9ZE39grpUuIkR
 ## Tech Stack
 
 - **Frontend**: React 19, Vite, TypeScript
-- **Backend**: Express, SQLite3
+- **Backend**: Express, better-sqlite3
 - **Package Manager**: npm

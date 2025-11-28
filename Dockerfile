@@ -21,7 +21,7 @@ FROM --platform=linux/amd64 node:20-alpine
 
 WORKDIR /app
 
-# 安装 python3 和 build 工具（sqlite3 需要）
+# 安装构建工具（better-sqlite3 可能需要）
 RUN apk add --no-cache python3 make g++
 
 # 复制 package 文件和 npm 配置
