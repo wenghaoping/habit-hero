@@ -10,29 +10,24 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Pd29pCNsU9ZE39grpUuIkR
 
 ## Run Locally
 
-**Prerequisites:**  Node.js 20+, pnpm
+**Prerequisites:**  Node.js 20+, npm
 
-1. Install pnpm (if not already installed):
-   ```bash
-   npm install -g pnpm
-   ```
-
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    rm -rf node_modules
-   pnpm install
+   npm install
    ```
 
-3. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key (optional)
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key (optional)
 
-4. Start the backend server:
+3. Start the backend server:
    ```bash
-   pnpm run server:dev
+   npm run server:dev
    ```
 
-5. In another terminal, start the frontend:
+4. In another terminal, start the frontend:
    ```bash
-   pnpm run dev
+   npm run dev
    ```
 
 6. Open http://localhost:3000 in your browser
@@ -40,5 +35,5 @@ View your app in AI Studio: https://ai.studio/apps/drive/1Pd29pCNsU9ZE39grpUuIkR
 ## Tech Stack
 
 - **Frontend**: React 19, Vite, TypeScript
-- **Backend**: Express, SQLite3
-- **Package Manager**: pnpm
+- **Backend**: Express, better-sqlite3
+- **Package Manager**: npm

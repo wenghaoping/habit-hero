@@ -28,7 +28,7 @@ docker-compose logs -f
 
 1. **构建镜像**
 ```bash
-docker build -t habit-hero:latest .
+docker build -t mmweng/habit-hero:latest .
 ```
 
 2. **运行容器**
